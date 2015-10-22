@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Streamgraph</title>
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  position: relative;
+  width: 960px;
+}
+
+select {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width:250px;
+}
+#catdiv {   
+  position: absolute;
+  right: 260px;
+  top: 10px;
+  font-size: 15px;
+}
+#check {   
+  position: absolute;
+  left: 960px;
+  top: 10px;
+  font-size: 15px;
+  width : 200px;
+}
+div.tooltip {   
+  position: absolute;           
+  text-align: center;           
+  width: 200px;                  
+  height: 60px;                 
+  padding: 2px;             
+  font: 12px sans-serif;        
+  background: lightsteelblue;   
+  border: 0px;      
+  border-radius: 8px;           
+  pointer-events: none;         
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+</style>
+<div id="catdiv">Category:  </div><select id="cat" onchange="refreshCategory(0)"></select>
+<div id="check">Select keywords to display<br><br></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> 
+<script>
+$(function(){
+  $.ajax({
+      contentType: 'application/json; charset=utf-8',
+      url:'/data/loadCat',
+      dataType: 'json',
+      success: function (results) { 
+        var categories = results.categories;
+        //var categories = ["shoes","cat2","cat3","cat4","cat5","cat6","cat7","cat8","cat9","cat10","cat11","cat12","cat13","cat14"]
+
+        var select = document.getElementById("cat");
+        for(var i = categories.length-1; i>=0 ; i--) {
+            var option = document.createElement('option');
+            option.text = option.value = categories[i];
+            select.add(option, 0);
+        }
+        refreshCategory(1);
+        refreshWords(results.wordjson);
+        var word_arr = []
+        for (var i=0;i<10;i++){
+          word_arr.push(results.wordjson[i].key);
+        }
+        loadVis(word_arr, results.wordjson);
+      },
+      error: function (request, status, error) {
+          alert(error);
+      }
+  });
+});
+function refreshCategory(val){
+  if (val==0){
+    var category = document.getElementById("cat").value;
+    $.ajax({
+        contentType: 'application/json; charset=utf-8',
+        url:'/data/loadWords',
+        dataType: 'text',
+        data: "category="+category,
+        success: function (results) {
+          var results1 = JSON.parse("[" + results + "]");
+          var results2 = results1[0];
+          refreshWords(results2.wordjson);
+          var word_arr = []
+          for (var i=0;i<10;i++){
+            word_arr.push(results2.wordjson[i].key);
+          }
+          loadVis(word_arr, results2.wordjson);
+        },
+        error: function (request, status, error) {
+            alert(error);
+        }
+    });
+  }
+}
+function refreshWords(result_arr){
+  for(var i=0; i< result_arr.length; i++){
+    if (i<10){
+      $('#check').append('<input type="checkbox" id="myCheckbox" checked = "true" value = '+result_arr[i].key+' />' + result_arr[i].key+'<BR>');
+    }
+    else{
+      $('#check').append('<input type="checkbox" id="myCheckbox" value = '+result_arr[i].key+' />' + result_arr[i].key+'<BR>'); 
+    }
+  }
+  $('#check').append(' <button type="button" class="btn">Generate Vis</button>');
+  $(".btn").on('click', function () {
+    var searchIDs = $("#check input:checkbox:checked").map(function(){
+      return $(this).val();
+    }).get(); 
+    loadVis(searchIDs, result_arr);
+  });
+}
+function loadVis(word_list, result_arr){
+  var data_pos = [];
+  var data_neg = [];
+  var word_arr = [];
+  var gudrevcnt = [];
+  var badrevcnt = [];
+  var topic_pos_words = [];
+  var topic_neg_words = [];
+  for(var i=0; i< result_arr.length; i++){
+    if ($.inArray(result_arr[i].key, word_list) > -1){
+      word_arr.push(result_arr[i].key)
+      gudrevcnt.push(result_arr[i].pcount);
+      badrevcnt.push(result_arr[i].ncount);
+      data_pos.push(result_arr[i].Positivevalues);
+      data_neg.push(result_arr[i].Negativevalues);
+      topic_pos_words.push(result_arr[i].Words1);
+      topic_neg_words.push(result_arr[i].Words2);
+    }
+  }
+  d3.select("svg").remove();
+  var n = word_arr.length, // number of layers
+      m = data_pos[0].length, // number of samples per layer //makes the path wavy
+      ctr = -1,
+      ctr2 = -1,
+      stack = d3.layout.stack().offset("zero"),
+      layers0 = stack(d3.range(n).map(function() { return bumpLayer1(m, data_pos); })),            
+      layers1 = stack(d3.range(n).map(function() { return bumpLayer2(m, data_neg); }));
+
+  var width = 960,
+      height = 500;
+
+  var x = d3.time.scale().domain([new Date('11/01/1999'), new Date('03/01/2013')]).range([0, width]);
+
+
+  var y1 = d3.scale.linear()
+      .domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y; }); })])
+      .range([height/2, 0]);
+  var y2 = d3.scale.linear()
+      .domain([0, d3.max(layers1, function(layer) { return d3.max(layer, function(d) { return d.y; }); })])
+      .range([height/2, height]);
+  var color = d3.scale.category10();
+  var area1 = d3.svg.area()
+              .x(function(d) { return x(d.x); })
+              .y0(function(d) { return height/2; })
+              .y1(function(d) { return y1(d.y); });
+  var area2 = d3.svg.area()
+              .x(function(d) { //console.log(x(d.x)); 
+                return x(d.x); })
+              .y0(function(d) { return height/2; })
+              .y1(function(d) { return y2(d.y); });
+  var div = d3.select("body").append("div")   
+              .attr("class", "tooltip")               
+              .style("opacity", 0);
+
+  var zoom = d3.behavior.zoom()
+                .x(x)
+                .scaleExtent([1,25])
+                .on("zoom", zoomed);
+
+  var svg = d3.select("body").append("svg")
+                .attr("width", width)
+                .attr("height", height+50)
+                .attr("transform", "translate(0,10)")
+                .call(zoom);
+  svg.selectAll(".path")
+      .data(layers0)
+      .enter().append("path")
+      .attr("class","path")
+      .attr("d", area1)
+      .style("fill", function(d,i) { return color(i%10); })
+      .on("mouseover", function(d, i) {
+          d3.selectAll('.path').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0;}})
+          d3.selectAll('.path2').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0;}});
+          div.transition()        
+              .duration(200)      
+              .style("opacity", .9);      
+          div .html("<strong>"+word_arr[i]+"<BR>Good review count : "+gudrevcnt[i] + "<BR>Bad review count : "+badrevcnt[i]+":</strong>")
+              .style("left", (d3.event.pageX - 250) + "px")     
+              .style("top", (d3.event.pageY) + "px");    
+
+          })                  
+      .on("mouseout", function(d) {     
+        d3.selectAll('.path').transition()
+              .style("opacity", 1);
+        d3.selectAll('.path2').transition()
+              .style("opacity", 1);  
+          div.transition()        
+              .duration(500)      
+              .style("opacity", 0);   
+      })
+      .on("click", function() {
+        document.getElementById("view2").innerHTML='<object type="text/html" data="Visualization.html" width = "960" height = "3000"></object>';
+      });
+  svg.selectAll(".path2")
+      .data(layers1)
+      .enter()
+      .append("path")
+      .attr("class","path2")
+      .attr("d", area2)
+      .style("fill", function(d,i) { return color(i%10); })
+      .on("mouseover", function(d, i) {
+          d3.selectAll('.path').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0}});
+          d3.selectAll('.path2').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0}});
+          div.transition()        
+              .duration(200)      
+              .style("opacity", .9);      
+          div .html("<strong>"+word_arr[i]+"<BR>Good review count : "+gudrevcnt[i] + "<BR>Bad review count : "+badrevcnt[i]+":</strong>")
+              .style("left", (d3.event.pageX - 250) + "px")     
+              .style("top", (d3.event.pageY) + "px");    
+          })                  
+      .on("mouseout", function(d) {   
+        d3.selectAll('.path').transition()
+              .style("opacity", 1);
+        d3.selectAll('.path2').transition()
+              .style("opacity", 1);    
+          div.transition()        
+              .duration(500)      
+              .style("opacity", 0);   
+      });
+  var line = svg.append("line")
+                          .attr("x1", 0)
+                          .attr("y1", height/2)
+                          .attr("x2", width)
+                          .attr("y2", height/2)
+                          .attr("stroke-width", 1)
+                         .attr("stroke", "black");
+  var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom")
+                .ticks(5)
+                .tickSize(2);
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + 500 + ")")
+    .call(xAxis);
+
+  var yAxisTop = d3.svg.axis().scale(y1)
+    .orient("left").ticks(5);
+  
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(0,0)")
+    .call(yAxisTop);
+
+  var yAxisBottom = d3.svg.axis().scale(y2)
+    .orient("left").ticks(5);
+  
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(0,0)")
+    .call(yAxisBottom);
+
+  function bumpLayer1(n, data_samplesx) {
+    var a = [], i;
+    ctr++;
+    for (i = 0; i < n; ++i) a[i] = 0;
+    var st_dt = new Date('11/01/1999');
+    //return a.map(function(d, i) { return {x: new Date(new Date(st_dt).setMonth(st_dt.getMonth()+i)), y: data_samplesx[ctr][i]}; });
+    return a.map(function(d, i) { return {x: new Date(new Date(st_dt).getTime() + 7*i*24*60*60*1000), y: data_samplesx[ctr][i]}; });
+  }
+  function bumpLayer2(n, data_samplesy) {
+    var a = [], i;
+    ctr2++;
+    for (i = 0; i < n; ++i) a[i] = 0;
+    var st_dt = new Date('11/01/1999');
+    //return a.map(function(d, i) { return {x: new Date(new Date(st_dt).setMonth(st_dt.getMonth()+i)), y: data_samplesy[ctr2][i]}; });
+    return a.map(function(d, i) { return {x: new Date(new Date(st_dt).getTime() + 7*i*24*60*60*1000), y: data_samplesy[ctr2][i]}; });
+  }
+  function zoomed() {
+    var currentZoom = d3.event.scale;
+
+    svg.selectAll('.path').remove();
+    svg.selectAll('.path2').remove();
+    svg.selectAll('.topicwords').remove();
+
+    svg.select("g.x.axis").call(xAxis);
+    svg.selectAll(".path")
+      .data(layers0)
+      .enter().append("path")
+      .attr("class","path")
+      .attr("d", area1)
+      .style("fill", function(d,i) { return color(i%10); })
+      .on("mouseover", function(d, i) {
+          svg.selectAll('.topicwords').remove();
+          if (currentZoom > 18){
+            for(ind=0;ind<topic_pos_words[i].length;ind++){
+              
+              if(topic_pos_words[i][ind] == 0){
+                console.log("");
+              }
+              else{
+                word_ind = 0;
+                for(var wi = 0;wi<topic_pos_words[i][ind].length;wi++){
+                  textHeight = height/2 - (word_ind * 14) - 10;
+                  if(topic_pos_words[i][ind][wi]!=""){
+                      word_ind++;
+                    }
+                  yHeight = y1(d[ind].y);
+                  if (textHeight > yHeight){
+                    wordText = svg.append("text")
+                                .attr("class","topicwords")
+                                .attr("x", x(d[ind].x)-13)
+                                .attr("y", textHeight)
+                                .attr("font-size","10")
+                                .attr("dy", ".35em")
+                                .text(topic_pos_words[i][ind][wi]);
+                  }
+                }
+              }
+            }
+          }
+          d3.selectAll('.path').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0;}})
+          d3.selectAll('.path2').transition()
+                .style("opacity",function(d,i1){if (i!= i1){ return 0;}});
+          div.transition()        
+              .duration(200)      
+              .style("opacity", .9);      
+          /*div .html("<strong>"+word_arr[i]+"<BR>Good review count : "+gudrevcnt[i] + "<BR>Bad review count : "+badrevcnt[i]+":</strong>")
+              .style("left", (d3.event.pageX - 250) + "px")     
+              .style("top", (d3.event.pageY) + "px");    */
+
+          })                  
+      .on("mouseout", function(d) {  
+        svg.selectAll('.topicwords').remove();
+        d3.selectAll('.path').transition()
+              .style("opacity", 1);
+        d3.selectAll('.path2').transition()
+              .style("opacity", 1);  
+          div.transition()        
+              .duration(500)      
+              .style("opacity", 0);   
+      })
+      .on("click", function() {
+        document.getElementById("view2").innerHTML='<object type="text/html" data="Visualization.html" width = "960" height = "3000"></object>';
+      });
+      svg.selectAll(".path2")
+        .data(layers1)
+        .enter()
+        .append("path")
+        .attr("class","path2")
+        .attr("d", area2)
+        .style("fill", function(d,i) { return color(i%10); })
+        .on("mouseover", function(d, i) {
+            svg.selectAll('.topicwords').remove();
+            if (currentZoom > 18){
+              for(ind=0;ind<topic_neg_words[i].length;ind++){
+                
+                if(topic_neg_words[i][ind] == 0){
+                  //console.log("");
+                }
+                else{
+                  word_ind = 0;
+                  for(var wi = 0;wi<topic_neg_words[i][ind].length;wi++){
+                    textHeight = height/2 + (word_ind * 14) + 10;
+                    if(topic_neg_words[i][ind][wi]!=""){
+                      word_ind++;
+                    }
+                    yHeight = y2(d[ind].y);
+                    if (textHeight < yHeight){
+                      wordText = svg.append("text")
+                                  .attr("class","topicwords")
+                                  .attr("x", x(d[ind].x)-10)
+                                  .attr("y", textHeight)
+                                  .attr("font-size","10")
+                                  .attr("dy", ".35em")
+                                  .text(topic_neg_words[i][ind][wi]);
+                    }
+                  }
+                }
+              }
+            }
+            d3.selectAll('.path').transition()
+                  .style("opacity",function(d,i1){if (i!= i1){ return 0}});
+            d3.selectAll('.path2').transition()
+                  .style("opacity",function(d,i1){if (i!= i1){ return 0}});
+            div.transition()        
+                .duration(200)      
+                .style("opacity", .9);      
+            div .html("<strong>"+word_arr[i]+"<BR>Good review count : "+gudrevcnt[i] + "<BR>Bad review count : "+badrevcnt[i]+":</strong>")
+                .style("left", (d3.event.pageX - 250) + "px")     
+                .style("top", (d3.event.pageY) + "px");    
+            })                  
+        .on("mouseout", function(d) {   
+          svg.selectAll('.topicwords').remove();
+          d3.selectAll('.path').transition()
+                .style("opacity", 1);
+          d3.selectAll('.path2').transition()
+                .style("opacity", 1);    
+            div.transition()        
+                .duration(500)      
+                .style("opacity", 0);   
+        });
+      var line = svg.append("line")
+                          .attr("x1", 0)
+                          .attr("y1", height/2)
+                          .attr("x2", width)
+                          .attr("y2", height/2)
+                          .attr("stroke-width", 1)
+                         .attr("stroke", "black");
+  }
+}
+</script>
+<body>
+<div id = "view2">
+</div>
+</body>

@@ -1,0 +1,60 @@
+Step 1 : 
+Update the topics
+-----------------------------------------------------
+db.shoekeys1.update( {"wordlist.word" : "true" } , 
+                {$set : {"wordlist.$.topic" : "topic_16"} } , 
+                false , 
+                true);
+-----------------------------------------------------
+
+Step 2 :
+Run query to group topics
+-----------------------------------------------------
+	db.shoekeys1.aggregate([
+		  {'$unwind': '$wordlist' },
+		  {'$project': { '_id': 0, "category": {$concat: ["Shoes"]},"st_dt": {$concat: ["2008-01-01"]}, "end_dt": {$concat: ["2013-01-01"]},
+		  'word1' : {$cond: { if: { $gte: [ "$score", '4.0' ] }, then: "$wordlist.word", else: '' }}, 
+		  'word2' : {$cond: { if: { $lte: [ "$score", '3.0' ] }, then: "$wordlist.word", else: '' }},
+		  'wordlist.topic': 1,
+		  'date':1, 'dateweek':1, 'score1': {$cond: { if: { $gte: [ "$score", '4.0' ] }, then: 1, else: 0 }}, 
+		  'score2': {$cond: { if: { $lte: [ "$score", '3.0' ] }, then: 1, else: 0 }}
+		  } 
+		  },
+		  { "$group": {
+		        "_id": {
+		            "wordlist": "$wordlist.topic",
+		            "date": "$dateweek"
+		        },
+		        "positiveCount": { "$sum": "$score1" },
+		        "negativeCount": { "$sum": "$score2" },
+		        "poswords": { "$addToSet": "$word1" },
+		        "negwords": { "$addToSet": "$word2" },
+		        "category" : { $max: "$category" },
+		        "st_dt" : { $max: "$st_dt" },
+		        "end_dt" : { $max: "$end_dt" }
+		    }},
+		  { "$group": {
+		        "_id": "$_id.wordlist",
+		        "dateCounts": { 
+		            "$push": { 
+		                "date": "$_id.date",
+		                "poswords": "$poswords",
+		                "negwords": "$negwords",
+		                "positiveCount": "$positiveCount",
+		                "negativeCount": "$negativeCount"
+		            },
+		        },
+		        "category" : { $max: "$category" },
+		        "st_dt" : { $max: "$st_dt" },
+		        "end_dt" : { $max: "$end_dt" },
+		        "positiveWordCount": { "$sum": "$positiveCount" },
+		        "negativeWordCount": { "$sum": "$negativeCount" },
+		        "totalAmount": { $sum: { $add: [ "$positiveCount", "$negativeCount" ] } }
+		    }},
+		    {'$project': { '_id':0, 'word': "$_id", 'dateCounts': 1, 'category' : 1, 'st_dt' : 1, 'end_dt' : 1, 'totalAmount':1, 'positiveWordCount':1, "negativeWordCount":1 }},
+		    {'$sort': { 'totalAmount': -1 } },
+		  { '$limit': 50 }
+		 ])
+
+	doc1.forEach(function(x){ db.catkeys.insert(x) })
+-----------------------------------------------------------

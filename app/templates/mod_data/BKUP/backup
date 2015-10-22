@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+  <title>Node-Link Tree</title>
+  
+  <style type="text/css">
+  .legend {
+    font-size:15px;
+    overflow: scroll;
+    border: thin solid black;
+    word-wrap: break-word;
+    width : 300;
+}
+  }
+  </style>  
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> 
+  <script src="{{ url_for('static', filename='js/input2.js') }}"></script>
+</head>
+<body>
+  <script type="text/javascript">
+    var keyword_arr = ["confortable","remaining"];
+    showVis();
+    function showVis(){
+      var data_samples =[];
+      var data_samples1 =[];
+      var margin = {top: 80, right: 20, bottom: 80, left: 20},
+      width = 1024 - margin.left - margin.right,
+      height = 600 - margin.top - margin.bottom,
+      multiplication_factor = 100,
+      block_size = ((width - keyword_arr.length * multiplication_factor)/keyword_arr.length );
+
+      var keyword_str = keyword_arr[0];
+      for(var i=1;i<keyword_arr.length - 1; i++){
+        keyword_str += "|"+keyword_arr[i];
+      }
+      
+      $.ajax({
+          contentType: 'application/json; charset=utf-8',
+          url:'/data/getComments2',
+          dataType: 'text',
+          data: "key="+keyword_str,
+          success: function (results) {
+            var results1 = JSON.parse("[" + results + "]");
+            var results2 = results1[0];
+            d3.select("svg").remove();
+
+            var svg = d3.select("body").append("svg")
+                  .attr("width", width + margin.left + margin.right)
+                  .attr("height", height + margin.top + margin.bottom);
+            var gg = svg.selectAll("g")
+                  .data(results2)
+                  .enter()
+                  .append("g")
+                  .attr("width", block_size)
+                  .attr("height", height)
+                  .attr("transform", function(group, group_ind){
+                    var translation_x = (group_ind * block_size)+(100*group_ind);
+                    var translation_y = 20;
+                    return "translate("+translation_x+","+translation_y+")";
+                  });
+            gg.each(function(group, group_ind) {
+              var comments = gg.selectAll(".comments")
+                               .data(group)
+                               .enter()
+                               .append("g")
+                               .attr("width",block_size)
+                               .attr("height",100);
+              comments.each(function(comment,comment_ind){
+                console.log(group_ind);
+                
+              });
+            });
+          },
+          error: function (request, status, error) {
+            alert(error);
+          }
+      });
+    }
+  </script>
+</body>
+</html>

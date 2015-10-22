@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<title>GestViz</title>
+<title>Streamgraph</title>
 <style>
 
 body {
@@ -10,10 +10,138 @@ body {
   width: 960px;
 }
 
+div.tooltip {   
+  position: absolute;           
+  text-align: center;           
+  width: 200px;                  
+  height: 60px;                 
+  padding: 2px;             
+  font: 12px sans-serif;        
+  background: lightsteelblue;   
+  border: 0px;      
+  border-radius: 8px;           
+  pointer-events: none;         
+}
+div.topicbox {   
+  overflow : scroll; 
+}
+
+div.wordbox {   
+  overflow : scroll; 
+}
+div.commentbox {   
+  overflow : scroll; 
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+ 
+span.ui-draggable {
+  cursor: move;
+}
+span.ui-state-disabled {
+  cursor: not-allowed;
+}
+
+li.ui-draggable {
+  cursor: move;
+}
+li.ui-state-disabled {
+  cursor: not-allowed;
+}
+.scrollit {
+    overflow:scroll;
+    height:500px;
+}
+
+.highlight {
+    /*background-color: #FFFF88;*/
+}
+
+.ui-autocomplete { border: 1px solid #999; width: 200px; background: #fff; cursor: default; overflow: auto; font-weight: normal; color: #3399ff;}
+
+#sidebar{
+   background-color: IndianRed;
+   float: left;
+   position: absolute;
+   height:15px;
+}
+
+.dragbar{
+   background-color:black;
+   height:15px;
+   float: right;
+   width: 1px;
+   cursor: col-resize;
+}
+#ghostbar{
+    width:1px;
+    background-color:black;
+    opacity:0.5;
+    position:absolute;
+    cursor: col-resize;
+    z-index:999}
+
+/*.autocomplete-suggestion { padding: 10px 5px; font-size: 1.2em; white-space: nowrap; overflow: hidden; }
+.autocomplete-selected { background: #f0f0f0; }
+.autocomplete-suggestions strong {  }*/
+
 </style>
 <div id = 'outerbox'>
-Hi
-<button onclick="printAlert()">Say Hello</button>
+<table align="center" border="1" rows = 12 cols = 10 cellpadding="1" cellspacing="1" style="width: 900px; height: 560px;">
+  <tbody>
+    <tr height="25px" align = "center">
+      <td colspan = 10>Category : <select id="cat" onchange="refreshCategory(0)"></select></td>
+    </tr>
+    <tr height="25px" align = "center">
+      <td width = "200px">Topics</td>
+      <td width = "200px">Words</td>
+      <td width = "500px">Reviews</td>
+    </tr>
+    <tr rowspan = 10>
+      <td width = "200px"><div class="scrollit">
+        <div class="topicbox" id="check" style="margin-left: 25px;margin-top: 25px;"></div></div></td>
+      <td width = "200px"><div class="scrollit"><div class="wordbox" id="wordbox"></div></div></td>
+      <td width = "500px">
+        <div class="scrollit"><div class="col commentbox" id = "commentbox">
+          <div align = "center">
+            <label for="tags">Search word: </label>
+            <input id="tags">
+            <button onclick="addWordToTopic()">Add word</button><br><br>
+          </div>
+        </div></div></td>
+    </tr>
+    <tr height = "50px">
+      <td colspan = 3 width = "900px" align="middle">
+        <button onclick="createNewTopic()">Create New Topic</button>
+        <button onclick="renameTopic()">Rename Topic</button>
+        <button onclick="removeTopic()">Remove Topic</button>
+        <button onclick="removeTopicWord()">Remove word from topic</button>
+        <button type="button" class="btn">Generate Vis</button>
+        <button onclick="showProducts()">View Products</button>
+        <!-- <button onclick="topic_distribution()"><a href="#myModal" data-toggle="modal" data-img-url=src="/static/lib/img1.png">View Topic Distribution</a></button> -->
+    </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="themeriver"></div>
+<div class="productlist" id = "productlist" style="display:none">
+  <h3>Products related to your topics</h3> 
+  Sort by : 
+  <select id="sortby" onchange="showProducts()">
+    <option value = "price" default>Price</option>
+    <option value = "score">Score</option>
+    <option value = "title">Title</option>
+  </select>
+  <table id ="prod_table" align="center" border="1" rows = 2 cols = 2 cellpadding="1" cellspacing="1" style="width: 900px;">
+    <tbody>
+    </tbody>
+  </table>
 
 </div>
 

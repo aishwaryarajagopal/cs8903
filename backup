@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+  <title>Node-Link Tree</title>
+  
+  <style type="text/css">
+  .legend {
+    font-size:10px;
+    overflow: scroll;
+    border: thin solid black;
+  }
+  </style>  
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> 
+  <script src="{{ url_for('static', filename='js/input2.js') }}"></script>
+</head>
+<body>
+  <script type="text/javascript">
+    var word_arr = ["comfortable"];
+    $(function(){
+      var data_samples =[];
+      var data_samples1 =[];
+      $.ajax({
+          contentType: 'application/json; charset=utf-8',
+          url:'/data/getComments2',
+          dataType: 'json',
+          success: function (results) {
+            for ( var i in results )
+            {
+                //i represents key
+                //results[i[ represents value//alert(i + '=' +  results[i] );
+            }
+            showvis();
+          },
+          error: function (request, status, error) {
+
+              alert(error);
+          }
+
+      });
+    });
+    function showvis(){
+      var prefix_str = ["The shoes I purchased for my feet are confortable and realy look neat. These softspot sandal looks good with my outfit, standing and walking, and even when I sit. The service on packaging and shipping was great, the shoes came on time and was not late. Thank You!","quality at a great price, very soft and confortable fit, stylish strap.fast shipping. What more can you expect from flip flops","Excelentes zapatos, duraderos y confortables, le he dado full rosca y no tienen más detalle que el sucio, buenos para beisbol y softbol, con buen agarre tanto en grama como en tierra, recomendados","I bought this shoes for my husband and he said that is like walked in a BMW shoes. Very confortable and soft. Excelent for every day work office.","These shoes are the best shoes ever. Soft leather and super confortable. The price was great and the shipping was good.I am very satisfied with them.","It's very soft and confortable, I bought 2."];
+      var margin = {top: 80, right: 180, bottom: 80, left: 180},
+      width = 960 - margin.left - margin.right,
+      height = 800 - margin.top - margin.bottom;
+      prefix_words = [];
+      for (var i = 0;i< prefix_str.length; i++){
+         prefix_words[i]= prefix_str[i].split(" ");
+      }
+
+      var svg = d3.select("body").append("svg")
+                  .attr("width", width + margin.left + margin.right)
+                  .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      for (var i = 0;i< prefix_str.length; i++){
+        var legend = svg.selectAll(".legend")
+          .data(prefix_words[i])
+          .enter()
+          .append("text")
+          .attr("x", function(d, j){
+            var len = 0, line_no = 0;
+            for (var k = 0;k<j;k++){
+              len += prefix_words[i][k].length;
+            }
+            len += j;
+            len *= 8;
+            var xval  = len % 300;
+            return xval;
+          })
+          .attr("y", function(d, j){
+            var line_no = 0, len = 0;
+            for (var k = 0;k<j;k++){
+              len += prefix_words[i][k].length;
+            }
+            len += j
+            len *= 8;
+            line_no = parseInt(len/300);
+            return (i*100)+(line_no * 14);
+          })
+          .attr("dy", ".35em")
+          .style("text-anchor", "start")
+          .text(function(d){return d;})
+          .on("click", function(d){console.log(d);});
+      }
+      /*
+      On click : 
+        if clicked on remaining
+          add to the end of the array
+        if clicked in list xxx
+          add before word in array
+      update svg
+      */
+    }
+  </script>
+</body>
+</html>

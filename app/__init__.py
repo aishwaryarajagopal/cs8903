@@ -1,13 +1,13 @@
 # Import flask and template operators
 from flask import Flask, render_template
-# from flask.ext.mongoengine import MongoEngine
+from flask.ext.mongoengine import MongoEngine
 
 # Define the WSGI application object
 app = Flask(__name__)
-# app.config["MONGODB_SETTINGS"] = {'DB': "amazon"}
+app.config["MONGODB_SETTINGS"] = {'DB': "amazon"}
 app.config["SECRET_KEY"] = "KeepThisS3cr3t"
 
-# db = MongoEngine(app)
+db = MongoEngine(app)
 
 # Sample HTTP error handling
 @app.errorhandler(404)

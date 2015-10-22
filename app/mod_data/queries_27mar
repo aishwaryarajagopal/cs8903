@@ -1,0 +1,110 @@
+db.orders.aggregate([
+                     { $match: { status: "A" } },
+                     { $group: { _id: "$productId", avgscore: { $avg: "$score" } } },
+                     { $sort: { total: -1 } }
+                   ])
+
+db.Shoes.aggregate([
+                     { $match: { productId: "B000A8OBO8" } },
+                     { $group: { _id: "$productId", avgscore: { $avg: "$score" } } },
+                     { $sort: { avgscore: 1 } }
+                   ])
+
+> db.Shoes.findOne()
+{
+	"_id" : ObjectId("54ff56ceebf6de2faea9238d"),
+	"title" : "Hi-Tec Men's Altitude IV Hiking Boot",
+	"text" : "The shoe seemed nice. I purchased the 2E version since I read in another review that they can be tight. Unfortunately, the top of the tongue bit into my ankle when I tied the shoe. Didn't matter which sock I wore. I had to return.",
+	"price" : "unknown",
+	"userId" : "A1FOZ2FP9EH9FW",
+	"summary" : "Tongue hurt my ankle",
+	"score" : "2.0",
+	"helpfulness" : "0/0",
+	"date" : "2013-01-08",
+	"profileName" : "Bill Lamack",
+	"productId" : "B000A8OBO8"
+}
+> 
+
+db.Shoes.find().forEach( function (x) {
+  x.score = parseInt(x.score); 
+  db.Shoes.save(x);
+});
+
+{'$project': { '_id': 0, "$productId": 1, "$title":1, "$score":1, "$price":1} },
+
+db.Shoes.createIndex( { text: "text" } )
+
+db.Shoes.aggregate(
+   [
+   	 { $match: { $text: { $search: "first last" } } },   	 
+     {
+       $group:
+         {
+           _id: "$productId",
+           avgScore: { $avg: "$score" }
+         }
+     }
+   ]
+)
+
+
+> db.Shoes.find({productId:"B000A8OBO8"},{score:1})
+{ "_id" : ObjectId("54ff56ceebf6de2faea9238d"), "score" : "2.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea9238f"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea92391"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea92393"), "score" : "4.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea92395"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea92397"), "score" : "3.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea92399"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea9239b"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea9239d"), "score" : "3.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea9239f"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea923a1"), "score" : "4.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea923a3"), "score" : "5.0" }
+{ "_id" : ObjectId("54ff56cfebf6de2faea923a5"), "score" : "2.0" }
+
+
+
+shoes_map = function(){
+emit(this.productId, {"title":this.title, "text":this.text, "price":this.price, "userId":this.userId, "summary":this.summary, "score":this.score, "helpfulness":this.helpfulness, "date":this.date, "profileName":this.profileName});
+}
+
+desc_map = function() {
+  emit(this.productId, {"desc":this.description});
+};
+
+
+r = function(key, values) {
+  var result = {
+    "title":"", 
+    "text":"",
+    "price":"", 
+    "userId":"", 
+    "summary":"", 
+    "score":"", 
+    "helpfulness":"", 
+    "date":"", 
+    "profileName":"",
+    "desc":""
+    };
+
+    values.forEach(function(value) {
+      if(value.title !== null) {result.title = value.title;}
+      if(value.text !== null) {result.text = value.text;}
+      if(value.price !== null) {result.price = value.price;}
+      if(value.userId !== null) {result.userId = value.userId;}
+      if(value.summary !== null) {result.summary = value.summary;}
+      if(value.score !== null) {result.score = value.score;}
+      if(value.helpfulness !== null) {result.helpfulness = value.helpfulness;}
+      if(value.date !== null) {result.date = value.date;}
+      if(value.profileName !== null) {result.profileName = value.profileName;}
+      if(value.desc !== null) {result.desc = value.desc;}
+
+    });
+
+    return result;
+}
+
+res = db.Shoes.mapReduce(shoes_map, r, {out: {reduce : 'joined'}});
+res = db.Description.mapReduce(desc_map, r, {out: {reduce : 'joined'}});

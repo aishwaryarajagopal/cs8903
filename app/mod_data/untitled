@@ -1,0 +1,63 @@
+########################################
+#Aggregation query
+########################################
+	db.shoekeys1.aggregate([
+		  {'$unwind': '$wordlist' },
+		  {'$project': { '_id': 0, 
+		  'word1' : {$cond: { if: { $gte: [ "$score", '4.0' ] }, then: "$wordlist.word", else: '' }}, 
+		  'word2' : {$cond: { if: { $lte: [ "$score", '3.0' ] }, then: "$wordlist.word", else: '' }},
+		  'wordlist.topic': 1,
+		  'date':1, 'score1': {$cond: { if: { $gte: [ "$score", '4.0' ] }, then: 1, else: 0 }}, 
+		  'score2': {$cond: { if: { $lte: [ "$score", '3.0' ] }, then: 1, else: 0 }}, 'month': { '$substr': [ '$date', 0, 7 ] } } },
+		  { "$group": {
+		        "_id": {
+		            "wordlist": "$wordlist.topic",
+		            "date": "$month"
+		        },
+		        "positiveCount": { "$sum": "$score1" },
+		        "negativeCount": { "$sum": "$score2" },
+		        "poswords": { "$addToSet": "$word1" },
+		        "negwords": { "$addToSet": "$word2" }
+		    }},
+		  { "$group": {
+		        "_id": "$_id.wordlist",
+		        "dateCounts": { 
+		            "$push": { 
+		                "date": "$_id.date",
+		                "poswords": "$poswords",
+		                "negwords": "$negwords",
+		                "positiveCount": "$positiveCount",
+		                "negativeCount": "$negativeCount"
+		            },
+		        },
+		        "positiveWordCount": { "$sum": "$positiveCount" },
+		        "negativeWordCount": { "$sum": "$negativeCount" },
+		        "totalAmount": { $sum: { $add: [ "$positiveCount", "$negativeCount" ] } },
+		    }},
+		    {'$project': { '_id':0, 'word': "$_id", 'dateCounts': 1, 'totalAmount':1, 'positiveWordCount':1, "negativeWordCount":1 }},
+		    {'$sort': { 'totalAmount': -1 } },
+		  { '$limit': 50 }
+		 ])
+mindate : db.shoes1.find({ 'date': { '$exists': 'true',  '$gt' : '1969-12-31'  } },{ '_id': 0,'date':1}).sort({'date':1}).limit(1)
+
+2012-12-31
+
+maxdate : db.shoes1.find({ 'date': { '$exists': 'true',  '$gt' : '1969-12-31'  } },{ '_id': 0,'date':1}).sort({'date':-1}).limit(1)
+
+2013-01-09
+
+########################################
+#To insert from one table into another
+########################################
+
+doc1.forEach(function(x){ db.catkeys.insert(x) })
+
+########################################
+#To add a new column to all documents in the table
+########################################
+db.catkeys1.update({},{$set : {"category":"CellAccessories"}},false,true)
+
+########################################
+#To retrieve a single column
+########################################
+db.catkeys.find({"category":"shoes"},{_id:1})

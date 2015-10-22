@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+  <title>Node-Link Tree</title>
+  
+  <style type="text/css">
+  circle {
+    cursor: pointer;
+    fill: #fff;
+    stroke: steelblue;
+    stroke-width: 1.5px;
+  }
+
+  text {
+    font-size:10px;
+  }
+
+  path.link {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1.5px;
+  }
+  #review {
+    width: 300px;
+    position: absolute;
+    top: 24px;
+    bottom: 0;
+    right: 0;
+    overflow-y: auto;
+    font-family: "Andale Mono", "Courier New", "Courier", monospace;
+  }
+  </style>  
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> 
+  <script src="{{ url_for('static', filename='js/input2.js') }}"></script>
+</head>
+<body>
+  <script type="text/javascript">
+    var carNames = ["The shoes I purchased for my feet are confortable and realy look neat. These softspot sandal looks good with my outfit, standing and walking, and even when I sit. The service on packaging and shipping was great, the shoes came on time and was not late. Thank You!","quality at a great price, very soft and confortable fit, stylish strap.fast shipping. What more can you expect from flip flops","Excelentes zapatos, duraderos y confortables, le he dado full rosca y no tienen más detalle que el sucio, buenos para beisbol y softbol, con buen agarre tanto en grama como en tierra, recomendados","I bought this shoes for my husband and he said that is like walked in a BMW shoes. Very confortable and soft. Excelent for every day work office.","These shoes are the best shoes ever. Soft leather and super confortable. The price was great and the shipping was good.I am very satisfied with them.","It's very soft and confortable, I bought 2."];
+    var margin = {top: 10, right: 25, bottom: 20, left: 210};
+    var w = 10000;
+    var h = 250;
+    var svg = d3.select("body")
+                .append("svg")
+                .attr("width", w+70)
+                .attr("height", h);
+    var legend = svg.selectAll(".legend")
+                    .data(carNames)
+                    .enter().append("g")
+                    .attr("class", "legend")
+                    .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+node.enter().append("text")
+    .attr("class", "node")
+    .attr("x", function (d) { return d.parent.px; })
+    .attr("y", function (d) { return d.parent.py; })
+    .call(wrap, 30); // wrap the text in <= 30 pixels
+
+    legend.append("text")
+        .attr("class", "node")
+        .attr("x", 20)
+        .attr("y", 29)
+        .attr("dy", ".35em")
+        .style("text-anchor", "start")
+        .text(function(d) { return d; });*/
+    function wrap(text, width) {
+      text.each(function() {
+        var text = d3.select(this),
+            words = text.text().split(/\s+/).reverse(),
+            word,
+            line = [],
+            lineNumber = 0,
+            lineHeight = 1.1, // ems
+            y = text.attr("y"),
+            dy = parseFloat(text.attr("dy")),
+            tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node().getComputedTextLength() > width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+db.cellkeys.aggregate([
+		  {'$unwind': '$wordlist.topic' },
+		  {'$project': { '_id': 0, 'wordlist.word':1, 'wordlist.topic':1},
+		  { "$group": {
+		        "_id": {
+		            "wordlist": "$wordlist.topic",
+		            "date": "$month"
+		        },
+		        "positiveCount": { "$sum": "$score1" },
+		        "negativeCount": { "$sum": "$score2" },
+		        "poswords": { "$addToSet": "$word1" },
+		        "negwords": { "$addToSet": "$word2" }
+		    }},
+		  { "$group": {
+		        "_id": "$_id.wordlist",
+		        "dateCounts": { 
+		            "$push": { 
+		                "date": "$_id.date",
+		                "poswords": "$poswords",
+		                "negwords": "$negwords",
+		                "positiveCount": "$positiveCount",
+		                "negativeCount": "$negativeCount"
+		            },
+		        },
+		        "positiveWordCount": { "$sum": "$positiveCount" },
+		        "negativeWordCount": { "$sum": "$negativeCount" },
+		        "totalAmount": { $sum: { $add: [ "$positiveCount", "$negativeCount" ] } },
+		    }},
+		    {'$project': { '_id':0, 'word': "$_id", 'dateCounts': 1, 'totalAmount':1, 'positiveWordCount':1, "negativeWordCount":1 }},
+		    {'$sort': { 'totalAmount': -1 } },
+		  { '$limit': 50 }
+		 ])
+
+db.shoekeys1.aggregate([{$project: {topic: "$wordlist.topic", 
+                                        word: "$wordlist.word", 
+                                        '_id': 0}}, 
+                            {$unwind: "$topic"}, 
+                            {$group: {_id: "$topic", 
+                                      words: {$addToSet: "$addToSet"}}}
+                       ])
+
+db.shoekeys1.aggregate(
+    { $project : {
+        topic: "$wordlist.topic", 
+        word: "$wordlist.word", 
+        '_id': 0
+    }},
+    { $unwind : "$topic" },
+    { "$group": {
+       "_id": { 
+           "topic": "$topic"
+       }, 
+       "words": { "$addToSet": "$word" } 
+   }}
+);
+
+ db.topic_words.insert({"topic":"Topic1", words : ["top", "review", "version", "nice"] })
+ db.topic_words.insert({"topic":"topic_2", words : ["sock", "ankle", "return", "tight"] })
+ db.topic_words.insert({"topic":"topic_3", words : ["ankle", "tongue", "bit","matter", "tight"] })
+ db.topic_words.insert({"topic":"topic_4", words : ["new", "first", "pair"]})
+ db.topic_words.insert({"topic":"topic_11", words : [ "second", "fit", "deal", "used"]})
+ db.topic_words.insert({"topic":"topic_6", words : ["style", "quality", "size", "show"]})
+ db.topic_words.insert({"topic":"topic25", words : ["hiking", "etc", "nothing", "boots"]})
+
+
+ 
